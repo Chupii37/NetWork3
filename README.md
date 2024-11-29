@@ -20,7 +20,7 @@ Follow the steps below to install the necessary software:
     sudo apt update
     sudo apt install curl
     ```
-3. Run the Network3 Script
+3. Run Network3 Node
     ```bash
     wget https://raw.githubusercontent.com/Chupii37/NetWork3/refs/heads/main/NetWork3.sh -O /tmp/NetWork3.sh && chmod +x /tmp/NetWork3.sh && sudo /tmp/NetWork3.sh
     ```
