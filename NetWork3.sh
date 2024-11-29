@@ -1,19 +1,14 @@
 #!/bin/bash
 
-# Update package list, install curl and Docker
-echo "Updating and installing packages..."
-sudo apt update -y
-sudo apt install -y curl docker.io
-
-# Start and enable Docker
-echo "Starting and enabling Docker..."
+# Update and install Docker
+sudo apt update
+sudo apt install -y docker.io
 sudo systemctl start docker
 sudo systemctl enable docker
 
-# Check and create directory if it doesn't exist
-[ ! -d "network3-docker" ] && mkdir network3-docker && echo "Directory 'network3-docker' created."
-
-cd network3-docker
+# Create directory if it doesn't exist
+mkdir -p /home/$USER/network3-docker
+cd /home/$USER/network3-docker
 
 # Retrieve public IP
 public_ip=$(curl -s ifconfig.me)
