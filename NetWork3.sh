@@ -27,10 +27,17 @@ EXPOSE 8080
 CMD ["bash", "-c", "bash manager.sh up; bash manager.sh key; exec bash"]
 EOL
 
-# Build and run Docker container
-echo "Building and running the container..."
+# Build Docker image
+echo "Building the Docker image..."
 docker build -t network3-docker-image .
-docker run -it --name network3-docker-container -p 8080:8080 network3-docker-image
+
+# Set container name and port number (default values)
+container_name="network3-docker-container"
+port_number=8080
+
+# Run Docker container with necessary privileges
+echo "Starting the container with required privileges..."
+docker run -it --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 network3-docker-image
 
 # Final information
 echo "Container is running on port 8080."
