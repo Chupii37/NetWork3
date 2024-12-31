@@ -105,4 +105,4 @@ echo -e "${BANNER}https://account.network3.ai/main?o=$public_ip:$port_number${NC
 echo -e "${INFO}Gunakan kunci yang akan ditampilkan untuk menghubungkan node dengan email Anda${NC}"
 
 # Menjalankan Docker container dengan nama dinamis sesuai dengan container_name
-docker run -d --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 $container_name
+docker run -it --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 $container_name
