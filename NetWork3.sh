@@ -57,10 +57,10 @@ RUN apt-get update && apt-get install -y \\
     iproute2 \\
     procps
 
-# Mengunduh dan mengekstrak Network3
-RUN wget https://network3.io/ubuntu-node-v2.1.1.tar && \\
-    tar -xf ubuntu-node-v2.1.1.tar && \\
-    rm ubuntu-node-v2.1.1.tar
+# Mengunduh dan mengekstrak Network3 dari URL yang baru
+RUN wget https://network3.io/ubuntu-node-v2.1.1.tar.gz && \\
+    tar -xvzf ubuntu-node-v2.1.1.tar.gz && \\
+    rm ubuntu-node-v2.1.1.tar.gz
 
 # Masuk ke direktori ubuntu-node
 WORKDIR /ubuntu-node
