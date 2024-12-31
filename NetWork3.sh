@@ -7,94 +7,102 @@ echo -e "\033[33mShowing Aniani!!!\033[0m"
 echo -e "\033[32mMenampilkan logo...\033[0m"
 wget -qO- https://raw.githubusercontent.com/Chupii37/Chupii-Node/refs/heads/main/Logo.sh | bash
 
-# Langkah 1: Memastikan Docker terinstal
-echo -e "\033[34mMemeriksa apakah Docker sudah terinstal...\033[0m"
-if ! command -v docker &> /dev/null; then
-    echo -e "\033[31mDocker belum terinstal, menginstal Docker...\033[0m"
-    sudo apt update
-    sudo apt install -y docker.io
-    sudo systemctl start docker
-    sudo systemctl enable docker
+# Warna untuk format output
+INFO="\033[34m"
+SUCCESS="\033[32m"
+ERROR="\033[31m"
+NC="\033[0m"  # Tanpa Warna
+BANNER="\033[1;33m"
+
+# Instalasi Docker
+echo -e "${INFO}Memasang Docker...${NC}"
+sudo apt update
+sudo apt install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+echo -e "${SUCCESS}Docker berhasil dipasang.${NC}"
+
+# Memeriksa apakah direktori ada
+if [ -d "network3-docker" ]; then
+  echo -e "${INFO}Direktori network3-docker sudah ada.${NC}"
 else
-    echo -e "\033[32mDocker sudah terinstal.\033[0m"
+  # Membuat direktori
+  mkdir network3-docker
+  echo -e "${SUCCESS}Direktori network3-docker berhasil dibuat.${NC}"
 fi
 
-# Langkah 2: Menginstal net-tools untuk pemeriksaan jaringan
-echo -e "\033[34mMenginstal net-tools...\033[0m"
-sudo apt install -y net-tools
+# Masuk ke dalam direktori
+cd network3-docker
 
-# Langkah 3: Mengunduh file ubuntu-node-v2.1.1.tar.gz
-echo -e "\033[34mMengunduh ubuntu-node-v2.1.1.tar.gz...\033[0m"
-wget https://network3.io/ubuntu-node-v2.1.1.tar.gz
-
-# Langkah 4: Mengekstrak file tar.gz yang diunduh
-echo -e "\033[34mMengekstrak file tar.gz...\033[0m"
-tar -xvzf ubuntu-node-v2.1.1.tar.gz
-
-# Langkah 5: Masuk ke direktori ubuntu-node
-cd ubuntu-node/ || exit
-
-# Langkah 6: Mengubah izin agar manager.sh bisa dieksekusi
-echo -e "\033[34mMengubah izin untuk manager.sh...\033[0m"
-chmod +x manager.sh
-
-# Langkah 7: Memastikan firewall aktif dan menambahkan aturan untuk membuka port 8080
-echo -e "\033[34mMemastikan firewall aktif dan menambahkan aturan untuk membuka port 8080...\033[0m"
-
-# Memeriksa apakah ufw (Uncomplicated Firewall) aktif
-if ! sudo ufw status | grep -q "Status: active"; then
-    echo -e "\033[33mFirewall belum aktif. Mengaktifkan firewall...\033[0m"
-    sudo ufw enable
-else
-    echo -e "\033[32mFirewall sudah aktif.\033[0m"
+# Mengambil IP publik
+public_ip=$(curl -s ifconfig.me)
+if [ -z "$public_ip" ]; then
+  echo -e "${ERROR}Gagal mengambil alamat IP publik. Keluar.${NC}"
+  exit 1
 fi
 
-# Menambahkan aturan untuk membuka port 8080
-sudo ufw allow 8080/tcp
+# Membuat atau mengganti Dockerfile dengan konten yang ditentukan
+cat <<EOL > Dockerfile
+# Menggunakan Ubuntu terbaru sebagai base image
+FROM ubuntu:latest
 
-# Langkah 8: Membuat Dockerfile jika belum ada
-echo -e "\033[34mMembuat Dockerfile...\033[0m"
+# Instal wget, ufw, tar, nano, sudo, net-tools, iproute2, dan procps
+RUN apt-get update && apt-get install -y \\
+    wget \\
+    ufw \\
+    tar \\
+    nano \\
+    sudo \\
+    net-tools \\
+    iproute2 \\
+    procps
 
-cat <<EOF > Dockerfile
-# Menggunakan image dasar Ubuntu
-FROM ubuntu:24.04
+# Mengunduh dan mengekstrak Network3
+RUN wget https://network3.io/ubuntu-node-v2.1.1.tar && \\
+    tar -xf ubuntu-node-v2.1.1.tar && \\
+    rm ubuntu-node-v2.1.1.tar
 
-# Menginstal dependensi yang diperlukan
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    net-tools \
-    docker.io \
-    && rm -rf /var/lib/apt/lists/*
+# Masuk ke direktori ubuntu-node
+WORKDIR /ubuntu-node
 
-# Menyalin semua file dari direktori lokal ke direktori kerja container
-COPY . /root/ubuntu-node
+# Membuka port 8080
+RUN ufw allow 8080
 
-# Mengatur direktori kerja
-WORKDIR /root/ubuntu-node
+# Menjalankan node dan memberikan shell
+CMD ["bash", "-c", "bash manager.sh up; bash manager.sh key; exec bash"]
+EOL
 
-# Memberikan izin eksekusi pada file manager.sh
-RUN chmod +x manager.sh
+# Mendeteksi instance network3-docker yang sudah ada dan menemukan nomor instance tertinggi
+existing_instances=$(docker ps -a --filter "name=network3-docker-" --format "{{.Names}}" | grep -Eo 'network3-docker-[0-9]+' | grep -Eo '[0-9]+'$ | sort -n | tail -1)
 
-# Menjalankan perintah untuk memulai node secara default
-CMD ["./manager.sh", "up"]
-EOF
+# Menetapkan nomor instance
+if [ -z "$existing_instances" ]; then
+  instance_number=1
+else
+  instance_number=$((existing_instances + 1))
+fi
 
-# Langkah 9: Membangun Docker image
-echo -e "\033[34mMembangun Docker image dengan nama 'ubuntu-node'...\033[0m"
-sudo docker build -t ubuntu-node .
+# Menetapkan nama container
+container_name="network3-docker-$instance_number"
 
-# Langkah 10: Menjalankan Docker container dengan port 8080 dan restart otomatis
-echo -e "\033[34mMenjalankan Docker container dengan port 8080...\033[0m"
-sudo docker run -d --name ubuntu-node-container -p 8080:8080 --restart=always ubuntu-node
+# Menghitung nomor port
+port_number=$((8080 + instance_number - 1))
 
-# Langkah 11: Menjalankan manager.sh untuk memulai node di dalam container
-echo -e "\033[34mMenjalankan manager.sh untuk memulai node di dalam container...\033[0m"
-sudo docker exec ubuntu-node-container /bin/bash -c "./manager.sh up"
+# Membangun Docker image dengan nama yang ditentukan
+docker build -t $container_name .
 
-# Langkah 12: Menjalankan manager.sh untuk menghasilkan key di dalam container
-echo -e "\033[34mMenjalankan manager.sh untuk menghasilkan key di dalam container...\033[0m"
-sudo docker exec ubuntu-node-container /bin/bash -c "./manager.sh key"
+# Memeriksa apakah ufw terinstal dan menambahkan aturan untuk nomor port
+if command -v ufw > /dev/null; then
+  echo -e "${INFO}Mengonfigurasi UFW untuk mengizinkan lalu lintas di port $port_number...${NC}"
+  sudo ufw allow $port_number
+  echo -e "${SUCCESS}UFW berhasil dikonfigurasi.${NC}"
+fi
 
-# Pesan akhir
-echo -e "\033[32mKunci berhasil dihasilkan dan sistem siap. Skrip eksekusi selesai.\033[0m"
+# Menampilkan pesan penyelesaian dan perintah untuk melihat log
+echo -e "${SUCCESS}Docker container akan dibangun dan dijalankan pada port $port_number.${NC}"
+echo -e "${INFO}Untuk melihat dashboard, kunjungi:${NC}"
+echo -e "${BANNER}https://account.network3.ai/main?o=$public_ip:$port_number${NC}"
+echo -e "${INFO}Gunakan kunci yang akan ditampilkan untuk menghubungkan node dengan email Anda${NC}"
+
+# Menjalankan Docker container dengan hak istimewa yang diperlukan dan shell interaktif (di detached mode)
+docker run -d --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 $container_name
