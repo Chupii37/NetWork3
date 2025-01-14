@@ -115,4 +115,4 @@ echo -e "${BANNER}https://account.network3.ai/main?o=$public_ip:$port_number${NC
 echo -e "${INFO}Use the key displayed to connect the node with your email${NC}"
 
 # Run Docker container in detached mode (background)
-docker run -d --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 --restart unless-stopped $container_name
+docker run -it --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 --restart unless-stopped $container_name
