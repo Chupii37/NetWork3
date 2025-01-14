@@ -110,9 +110,7 @@ fi
 # Display completion message and instructions
 echo -e "${SUCCESS}Docker container will be built and run on port $port_number.${NC}"
 echo -e "${WARN}Please make sure to allow the port through your firewall if UFW is not used.${NC}"
-echo -e "${INFO}To view the dashboard, visit:${NC}"
-echo -e "${BANNER}https://account.network3.ai/main?o=$public_ip:$port_number${NC}"
 echo -e "${INFO}Use the key displayed to connect the node with your email${NC}"
 
-# Run Docker container in detached mode (background)
+# Run Docker container
 docker run -it --cap-add=NET_ADMIN --device /dev/net/tun --name $container_name -p $port_number:8080 --restart unless-stopped $container_name
